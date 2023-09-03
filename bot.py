@@ -18,6 +18,7 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
+    await message.answer_sticker('CAACAgIAAxkBAAEKNZ9k9EtDMD6d6zon0zd1w00qI6kgTgAC7BAAAsa5YEsGgHzZTAQLJDAE')
     await message.answer(f"Hello, {hbold(message.from_user.full_name)}!")
 
 @dp.message(F.text=='/weather')
@@ -25,6 +26,10 @@ async def get_weather(message: Message):
     async with python_weather.Client(unit=python_weather.IMPERIAL) as client:
         weather = await client.get('Wroclaw')
         await message.answer(str(weather.current.kind)+' '+str(round((weather.current.temperature-32)*(5/9)))+'°C')
+
+@dp.message(F.document)
+async def get_weather(message: Message):
+    await message.forward(os.getenv('GROP_CHAT'))
 
 
 @dp.message()
