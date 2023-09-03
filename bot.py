@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import sys
+import requests
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.methods.send_message import SendMessage
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -27,6 +29,7 @@ keybord=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Weather'),KeyboardBu
 class Form(StatesGroup):
     city = State()
     zodiac_sign=State()
+    horoscope_date=State()
     
 def gen_markup(args):
     markup = InlineKeyboardBuilder()
@@ -55,10 +58,33 @@ async def process_weather(message: Message, state: FSMContext):
 
 @dp.message(F.text=='Horoscope')
 async def get_zodiac_sign(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.zodiac_sign)
     await message.answer("What's your zodiac sign?\nChoose one:",reply_markup=gen_markup(zodiac_signs))
 
-#@dp.callback_query(F.data.in_(zodiac_signs))
-#async def process_sign(message: CallbackQuery, state: FSMContext):
+@dp.callback_query(F.data.in_(zodiac_signs))
+async def process_sign(message: CallbackQuery, state: FSMContext):
+    await state.update_data(zodiac_signs=message.data)
+    await state.set_state(Form.horoscope_date)
+    await Bot(TOKEN, parse_mode=ParseMode.HTML)(SendMessage(chat_id=message.from_user.id,text="What day do you want to know?\nChoose one: TODAY, TOMORROW, YESTERDAY, or a date in format YYYY-MM-DD."))
+
+@dp.callback_query(Form.horoscope_date)
+async def get_horoscope(message: Message, state: FSMContext):
+    data = await state.get_data()
+    await state.clear()
+    day = str(message.text)
+    print(day, type(message.text))
+    sign=str(data[zodiac_signs])
+    horoscope = await get_daily_horoscope(sign, day)
+    data = horoscope["data"]
+    horoscope_message = f'*Horoscope:* {data["horoscope_data"]}\\n*Sign:* {sign}\\n*Day:* {data["date"]}'
+    await message.answer(f"Here's your horoscope!\n{horoscope_message}",reply_markup=keybord)
+
+async def get_daily_horoscope(sign: str, day: str) -> dict:
+    url = "https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily"
+    params = {"sign": sign, "day": day}
+    response = await requests.get(url, params)
+    return response.json()
+
 
 @dp.message(F.document)
 async def get_weather(message: Message):
