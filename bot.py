@@ -25,6 +25,11 @@ dp = Dispatcher()
 
 keybord=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Weather'),KeyboardButton(text='Horoscope')]])
 
+def gen_keybord(args):
+    list=[]
+    for i in args:
+        list.append([KeyboardButton(text=i)])
+    return ReplyKeyboardMarkup(keyboard=list)
 
 class Form(StatesGroup):
     city = State()
@@ -47,7 +52,7 @@ async def command_start_handler(message: Message) -> None:
 @dp.message(F.text=='Weather')
 async def get_weather(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.city)
-    await message.answer("Hi there! What's your city?",reply_markup=ReplyKeyboardRemove())
+    await message.answer("Hi there! What's your city?",reply_markup=gen_keybord(['Wroclaw']))
 
 @dp.message(Form.city)
 async def process_weather(message: Message, state: FSMContext):
@@ -59,30 +64,30 @@ async def process_weather(message: Message, state: FSMContext):
 @dp.message(F.text=='Horoscope')
 async def get_zodiac_sign(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.zodiac_sign)
-    await message.answer("What's your zodiac sign?\nChoose one:",reply_markup=gen_markup(zodiac_signs))
+    await message.answer("What's your zodiac sign?\nChoose one",reply_markup=gen_keybord(zodiac_signs))
 
-@dp.callback_query(F.data.in_(zodiac_signs))
-async def process_sign(message: CallbackQuery, state: FSMContext):
-    await state.update_data(zodiac_signs=message.data)
+@dp.message(Form.zodiac_sign)
+async def process_sign(message: Message, state: FSMContext):
+    await state.update_data(zodiac_sign=message.text)
     await state.set_state(Form.horoscope_date)
-    await Bot(TOKEN, parse_mode=ParseMode.HTML)(SendMessage(chat_id=message.from_user.id,text="What day do you want to know?\nChoose one: TODAY, TOMORROW, YESTERDAY, or a date in format YYYY-MM-DD."))
+    await message.answer("What day do you want to know?\nChoose one: TODAY, TOMORROW, YESTERDAY, or a date in format YYYY-MM-DD.", reply_markup=ReplyKeyboardRemove())
 
-@dp.callback_query(Form.horoscope_date)
+@dp.message(Form.horoscope_date)
 async def get_horoscope(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.clear()
     day = str(message.text)
     print(day, type(message.text))
-    sign=str(data[zodiac_signs])
+    sign=str(data['zodiac_sign']).capitalize()
     horoscope = await get_daily_horoscope(sign, day)
     data = horoscope["data"]
-    horoscope_message = f'*Horoscope:* {data["horoscope_data"]}\\n*Sign:* {sign}\\n*Day:* {data["date"]}'
+    horoscope_message = f"{hbold('Horoscope')}: {data['horoscope_data']}\n{hbold('Sign')}: {sign}\n{hbold('Day')}: {data['date']}"
     await message.answer(f"Here's your horoscope!\n{horoscope_message}",reply_markup=keybord)
 
 async def get_daily_horoscope(sign: str, day: str) -> dict:
     url = "https://horoscope-app-api.vercel.app/api/v1/get-horoscope/daily"
     params = {"sign": sign, "day": day}
-    response = await requests.get(url, params)
+    response = requests.get(url, params)
     return response.json()
 
 
