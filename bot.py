@@ -1,12 +1,14 @@
 import asyncio
 import logging
 import sys
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import ReplyKeyboardMarkup
-from aiogram.types import KeyboardButton
+
+from aiogram import Bot, Dispatcher, F
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove,KeyboardButton,Message, CallbackQuery
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
-from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
 
@@ -16,10 +18,22 @@ import python_weather
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
+zodiac_signs=['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
 dp = Dispatcher()
 
 keybord=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Weather'),KeyboardButton(text='Horoscope')]])
 
+
+class Form(StatesGroup):
+    city = State()
+    zodiac_sign=State()
+    
+def gen_markup(args):
+    markup = InlineKeyboardBuilder()
+    for i in args:
+        markup.button(text=i, callback_data=i)
+    markup.adjust(1,repeat=True)
+    return markup.as_markup()
 
 
 @dp.message(CommandStart())
@@ -28,13 +42,23 @@ async def command_start_handler(message: Message) -> None:
     await message.answer(f"Hello, {hbold(message.from_user.full_name)}!",reply_markup=keybord)
 
 @dp.message(F.text=='Weather')
-async def get_weather(message: Message):
+async def get_weather(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.city)
+    await message.answer("Hi there! What's your city?",reply_markup=ReplyKeyboardRemove())
+
+@dp.message(Form.city)
+async def process_weather(message: Message, state: FSMContext):
+    await state.clear()
     async with python_weather.Client(unit=python_weather.IMPERIAL) as client:
-        weather = await client.get('Wroclaw')
-        await message.answer(f'Current weather:\n{weather.current.kind} {round((weather.current.temperature-32)*(5/9))}°C\nWind speed:{round(weather.current.wind_speed*1.6)} km/h')
+        weather = await client.get(message.text)
+        await message.answer(f'Current weather:\n{weather.current.kind} {round((weather.current.temperature-32)*(5/9))}°C\nWind speed:{round(weather.current.wind_speed*1.6)} km/h',reply_markup=keybord)
 
 @dp.message(F.text=='Horoscope')
-async def get_weather(message: Message):
+async def get_zodiac_sign(message: Message, state: FSMContext) -> None:
+    await message.answer("What's your zodiac sign?\nChoose one:",reply_markup=gen_markup(zodiac_signs))
+
+#@dp.callback_query(F.data.in_(zodiac_signs))
+#async def process_sign(message: CallbackQuery, state: FSMContext):
 
 @dp.message(F.document)
 async def get_weather(message: Message):
@@ -42,7 +66,7 @@ async def get_weather(message: Message):
 
 
 @dp.message()
-async def echo_handler(message: types.Message) -> None:
+async def echo_handler(message: Message) -> None:
     try:
         await message.answer('I do not understand you.')
     except TypeError:
