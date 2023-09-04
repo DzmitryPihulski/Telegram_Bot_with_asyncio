@@ -3,22 +3,22 @@
 ## Introduction
 This bot was created in self-studing proposes.<br>
 Everything was written in 1 file bot.py<br>
-There is file .env with BOT TOKEN and other passwords. It was not included in this repositori.
+There is file .env with BOT TOKEN and other passwords. It was not included in this repository.
 
 ## Bot commands
-1. Start command: basic command where bot will send sticker and greatings.
+1. Start command: basic command where bot will send sticker and greetings.
 
-2. Weather checker: You can check current weather in any city.<br> Bot will ask you to give him city's name. After that, with the help of FSM content and python_weather library, it will reply.
+2. Weather checker: You can check the current weather in any city.<br> The Bot will ask you to give him the city's name. After that, with the help of FSM content and python_weather library, it will reply.
 
-3. Ask AI: This feature uses openAI API to ask AI questions. It not free program, so the number of questions is limited, because I have free trial.
+3. Ask AI: This feature uses an openAI API to ask AI questions. It not a free program, so the number of questions is limited, because I have free trial.
 
 4. Horoscope check: This time bot will ask you about your zodiac sign and date. With the help of requests library and API, it will send you horoscope for this zodiac sign and date.
 
-5. Sending documents: If you will send any document to bot, it will forward your document to certain group.
+5. Sending documents: If you send any document to bot, it will forward your document to certain group.
 
 6. Generating qr-codes: If you will send anything that is not in above commands, it will make a qr-code of your message and reply with it.
 
-## Used libraryies
+## Used libraries
 * asyncio 3.4.3
 * logging 0.4.9.6
 * requests 2.31.0
@@ -27,8 +27,8 @@ There is file .env with BOT TOKEN and other passwords. It was not included in th
 * aiogram 3.0.0
 * dotenv 1.0.0
 * python_weather 1.0.3
-## Instalation process
-First of all make your own .env file in the same folder with my bot.py.
+## Installation process
+First of all, make your own .env file in the same folder with my bot.py.
 Add to you .env file this:<br>
     <b>TOKEN</b> = your bot token<br>
     <b>GROP_CHAT</b> = your group id<br>
