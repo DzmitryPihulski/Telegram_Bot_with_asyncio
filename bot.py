@@ -4,18 +4,13 @@ import sys
 import requests
 import pyqrcode
 import openai
-
 from aiogram import Bot, Dispatcher, F
-from aiogram.methods.send_message import SendMessage
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove,KeyboardButton,Message, CallbackQuery,FSInputFile
+from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove,KeyboardButton,Message,FSInputFile
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.utils.markdown import hbold
-
-
 from dotenv import load_dotenv
 import os
 import python_weather
@@ -27,33 +22,32 @@ openai.Model.list()
 zodiac_signs=['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
 dp = Dispatcher()
 
-keybord=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Weather'),KeyboardButton(text='Horoscope')],[KeyboardButton(text='Ask AI')]])
-
-def gen_keybord(args):
-    list=[]
-    for i in args:
-        list.append([KeyboardButton(text=i)])
-    return ReplyKeyboardMarkup(keyboard=list)
-
+##States
 class Form(StatesGroup):
     city = State()
     zodiac_sign=State()
     horoscope_date=State()
     ai_querry=State()
     
-def gen_markup(args):
-    markup = InlineKeyboardBuilder()
+#Basic keybord
+keybord=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Weather'),KeyboardButton(text='Horoscope')],[KeyboardButton(text='Ask AI')]])
+
+#Keyboard generator
+def gen_keybord(args):
+    list=[]
     for i in args:
-        markup.button(text=i, callback_data=i)
-    markup.adjust(1,repeat=True)
-    return markup.as_markup()
+        list.append([KeyboardButton(text=i)])
+    return ReplyKeyboardMarkup(keyboard=list)
 
+###BOT FUNCTIONS
 
+##1. Start command
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     await message.answer_sticker('CAACAgIAAxkBAAEKNZ9k9EtDMD6d6zon0zd1w00qI6kgTgAC7BAAAsa5YEsGgHzZTAQLJDAE')
     await message.answer(f"Hello, {hbold(message.from_user.full_name)}!",reply_markup=keybord)
 
+##2. Weather checker
 @dp.message(F.text=='Weather')
 async def get_weather(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.city)
@@ -66,6 +60,7 @@ async def process_weather(message: Message, state: FSMContext):
         weather = await client.get(message.text)
         await message.answer(f'Current weather:\n{weather.current.kind} {round((weather.current.temperature-32)*(5/9))}°C\nWind speed:{round(weather.current.wind_speed*1.6)} km/h',reply_markup=keybord)
 
+##3. Ask AI
 @dp.message(F.text=='Ask AI')
 async def get_querry(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.ai_querry)
@@ -84,7 +79,8 @@ async def process_querry(message: Message, state: FSMContext):
         frequency_penalty=0
     )
     await message.answer(response['choices'][0]['text'], reply_markup=keybord)
-
+    
+##4. Horoscope check
 @dp.message(F.text=='Horoscope')
 async def get_zodiac_sign(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.zodiac_sign)
@@ -114,28 +110,26 @@ async def get_daily_horoscope(sign: str, day: str) -> dict:
     response = requests.get(url, params)
     return response.json()
 
-
+##5. Sending documents
 @dp.message(F.document)
 async def get_weather(message: Message):
     await message.forward(os.getenv('GROP_CHAT'))
 
-
+##6. Generating qr-codes
 @dp.message()
 async def echo_handler(message: Message) -> None:
     try:
         img=pyqrcode.create(message.text)
         img.png('qrcode.png',scale=5)
-        await message.answer_photo(photo=FSInputFile('qrcode.png'),caption='I do not understand you, but here is qr-code of your message',parse_mode='Markdown')
+        await message.answer_photo(photo=FSInputFile('qrcode.png'),caption='I do not understand you, but here is qr-code of your message',parse_mode='Markdown',reply_markup=keybord)
         os.remove('qrcode.png')
     except TypeError:
         # But not all the types is supported to be copied so need to handle it
         await message.answer("Nice try!")
 
-
-async def main() -> None:
+async def main() -> None:  
     bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
