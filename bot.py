@@ -3,6 +3,7 @@ import logging
 import sys
 import requests
 import pyqrcode
+import openai
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.methods.send_message import SendMessage
@@ -21,6 +22,8 @@ import python_weather
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
+openai.api_key=os.getenv('OPEN_AI_KEY')
+openai.Model.list()
 zodiac_signs=['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
 dp = Dispatcher()
 
@@ -62,6 +65,25 @@ async def process_weather(message: Message, state: FSMContext):
     async with python_weather.Client(unit=python_weather.IMPERIAL) as client:
         weather = await client.get(message.text)
         await message.answer(f'Current weather:\n{weather.current.kind} {round((weather.current.temperature-32)*(5/9))}°C\nWind speed:{round(weather.current.wind_speed*1.6)} km/h',reply_markup=keybord)
+
+@dp.message(F.text=='Ask AI')
+async def get_querry(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.ai_querry)
+    await message.answer("Hi there! What's your question?",reply_markup=ReplyKeyboardRemove())
+
+@dp.message(Form.ai_querry)
+async def process_querry(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer('Wait for the answer')
+    response = openai.Completion.create(
+        model='text-davinci-003',
+        prompt=message.text,
+        temperature=1,
+        max_tokens=2048,
+        top_p=0.7,
+        frequency_penalty=0
+    )
+    await message.answer(response['choices'][0]['text'], reply_markup=keybord)
 
 @dp.message(F.text=='Horoscope')
 async def get_zodiac_sign(message: Message, state: FSMContext) -> None:
